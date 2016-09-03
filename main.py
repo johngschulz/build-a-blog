@@ -15,11 +15,67 @@
 # limitations under the License.
 #
 import webapp2
+import cgi
+import jinja2
+import os
+from google.appengine.ext import db
 
-class MainHandler(webapp2.RequestHandler):
+# set up jinja
+template_dir = os.path.join(os.path.dirname(__file__), "templates")
+jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir))
+
+class Handler(webapp2.RequestHandler):
+    def write(self, *a, **kw):
+        self.response.out.write(*a, **kw)
+
+    def render_str(self, template, **params):
+        t = jinja_env.get_template(template)
+        return t.render(params)
+
+    def render(self, template, **kw):
+        self.write(self.render_str(template, **kw))
+
+class Entry(db.Model):
+    title = db.StringProperty(required = True)
+    entry = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+
+class MainPage(Handler):
+    # handles the '/' webpage
     def get(self):
-        self.response.write('Hello world!')
+        self.render("base.html")
+
+class NewEntry(Handler):
+    # handles new-entry form submissions
+    def render_entry_form(self, title="", entry="", error=""):
+        self.render("new-entry.html", title=title, entry=entry, error=error)
+
+    def get(self):
+        self.render_entry_form()
+
+    def post(self):
+        title = self.request.get("title")
+        entry = self.request.get("entry")
+
+        if title and entry:
+            e = Entry(title=title, entry=entry)
+            e.put()
+
+            self.redirect("/blog")
+        else:
+            error = "We need both a title and entry content!"
+            self.render_entry_form(title, entry, error)
+
+class BlogEntries(Handler):
+    #handles the '/blog' webpage
+    def render_entries(self, title="", entry="", error=""):
+        entries = db.GqlQuery("SELECT * FROM Entry ORDER BY created DESC")
+        self.render("front.html", title=title, entry=entry, error=error, entries=entries)
+    def get(self):
+        self.render_entries()
 
 app = webapp2.WSGIApplication([
-    ('/', MainHandler)
+    ('/', MainPage),
+    ('/blog', BlogEntries),
+    ('/new-entry', NewEntry)
 ], debug=True)
