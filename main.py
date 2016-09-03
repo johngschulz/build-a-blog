@@ -69,7 +69,7 @@ class NewEntry(Handler):
 class BlogEntries(Handler):
     #handles the '/blog' webpage
     def render_entries(self, title="", entry="", error=""):
-        entries = db.GqlQuery("SELECT * FROM Entry ORDER BY created DESC")
+        entries = db.GqlQuery("SELECT * FROM Entry ORDER BY created DESC LIMIT 5")
         self.render("front.html", title=title, entry=entry, error=error, entries=entries)
     def get(self):
         self.render_entries()
