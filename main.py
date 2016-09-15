@@ -61,7 +61,7 @@ class NewEntry(Handler):
             e = Entry(title=title, entry=entry)
             e.put()
 
-            self.redirect("/blog")
+            self.redirect("/blog/"+ str(e.key().id()))
         else:
             error = "We need both a title and entry content!"
             self.render_entry_form(title, entry, error)
@@ -74,8 +74,21 @@ class BlogEntries(Handler):
     def get(self):
         self.render_entries()
 
+class ViewPostHandler(Handler):
+    #handle viewing single post by entity id
+    def render_single_entry(self, id, title="", entry="", error=""):
+        single_entry = Entry.get_by_id(int(id), parent=None)
+        self.render("single-entry.html", title=title, entry=entry, error=error, single_entry=single_entry)
+    def get(self, id):
+        if id:
+            self.render_single_entry(id)
+        else:
+            self.render_single_entry(id, title = "nothing here!",
+                        post = "there is no post with id "+ str(id))
+
 app = webapp2.WSGIApplication([
     ('/', MainPage),
     ('/blog', BlogEntries),
-    ('/new-entry', NewEntry)
+    ('/new-entry', NewEntry),
+    webapp2.Route('/blog/<id:\d+>', ViewPostHandler),
 ], debug=True)
